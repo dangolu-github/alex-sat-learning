@@ -110,12 +110,25 @@
       .replace(/&lt;(\/?)(u|sub|sup|em|i|strong|b)&gt;/gi, function (_, close, tag) { return '<' + close + tag.toLowerCase() + '>'; });
   }
 
+  function questionImageUrl(url) {
+    try { var u = new URL(url, window.location.href); return (u.origin === window.location.origin || u.origin === 'https://dangolu-github.github.io') && /^\/(alex-sat-learning|preview)\/target-practice\/question-images\/[a-f0-9]{16}\.webp$/.test(u.pathname) && !u.search && !u.hash; } catch (_) { return false; }
+  }
+
+  document.addEventListener('click', function (event) {
+    var button = event.target.closest('[data-image-zoom]');
+    if (!button) return;
+    var expanded = button.getAttribute('aria-pressed') !== 'true';
+    button.setAttribute('aria-pressed', String(expanded));
+    button.textContent = expanded ? 'Fit question to page' : 'Enlarge question';
+    button.parentElement.classList.toggle('is-enlarged', expanded);
+  });
+
   function supplementCard(item) {
     var options = (item.options || []).slice(0, 4);
     while (options.length < 4) options.push('');
     return '<article class="question booster-inline-card supplement-question" id="q-' + Number(item.number) + '">' +
       '<div class="qhead"><h2>Question ' + Number(item.number) + '</h2></div>' +
-      '<div class="booster-text-question">' + paragraphs(item.passage) + '<p class="stem">' + markup(item.stem || '') + '</p></div>' +
+      (questionImageUrl(item.imageUrl) ? '<div class="booster-source-image"><button type="button" data-image-zoom aria-pressed="false">Enlarge question</button><div class="question-image-frame" tabindex="0" aria-label="Question image"><img src="' + escapeHtml(item.imageUrl) + '" alt="Question ' + Number(item.number) + ': passage and answer choices" loading="lazy"></div><a href="' + escapeHtml(item.imageUrl) + '" target="_blank" rel="noopener">Open larger view</a></div>' : '<div class="booster-text-question">' + paragraphs(item.passage) + '<p class="stem">' + markup(item.stem || '') + '</p></div>') +
       '<p class="answer-prompt">Choose your answer.</p>' +
       '<ol class="choices booster-letter-choices booster-text-choices">' +
       options.map(function (text, index) { return '<li class="choice"><strong>' + String.fromCharCode(65 + index) + '</strong><span class="choice-text">' + markup(text) + '</span></li>'; }).join('') +

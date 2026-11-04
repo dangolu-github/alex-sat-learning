@@ -249,3 +249,10 @@ body.portal-ready .options.choices-words .answer-label { grid-column: 1 / -1; ju
     overscroll-behavior-x: contain;
   }
 }
+
+.booster-source-image img{display:block;max-width:100%;height:auto;background:white}.booster-source-image a{display:inline-block;margin:8px 0 14px;font-size:14px}.booster-source-image{min-width:0}@media print{.booster-source-image a{display:none}}
+
+.question-image-frame{max-width:100%;min-width:0;overflow-x:auto}
+.booster-source-image button{margin:8px 0;font:inherit;padding:8px 12px;cursor:pointer}
+.booster-source-image.is-enlarged img{max-width:none;width:max(800px,100%);height:auto}
+@media print{.booster-source-image button{display:none}.booster-source-image.is-enlarged img{max-width:100%;width:auto}.question-image-frame{overflow:visible}}

@@ -545,9 +545,22 @@
       .replace(/&lt;(\/?)(u|sub|sup|em|i|strong|b)&gt;/gi, function (_, close, tag) { return '<' + close + tag.toLowerCase() + '>'; });
   }
 
+  function questionImageUrl(url) {
+    try { var u = new URL(url, window.location.href); return (u.origin === window.location.origin || u.origin === 'https://dangolu-github.github.io') && /^\/(alex-sat-learning|preview)\/target-practice\/question-images\/[a-f0-9]{16}\.webp$/.test(u.pathname) && !u.search && !u.hash; } catch (_) { return false; }
+  }
+
   function supplementSourceQuestion(supplement) {
     var article = document.createElement('article');
     article.className = 'source-question supplement-source-question';
+    if (questionImageUrl(supplement.imageUrl)) {
+      var img = document.createElement('img'); img.src = supplement.imageUrl;
+      img.alt = 'Question passage and answer choices'; img.style.maxWidth = '100%'; img.style.height = 'auto';
+      var zoom = document.createElement('a'); zoom.href = supplement.imageUrl; zoom.target = '_blank'; zoom.rel = 'noopener'; zoom.textContent = 'Open larger view';
+      var frame = document.createElement('div'); frame.style.overflowX = 'auto'; frame.tabIndex = 0; frame.append(img);
+      var toggle = document.createElement('button'); toggle.type = 'button'; toggle.textContent = 'Enlarge question'; toggle.setAttribute('aria-pressed', 'false');
+      toggle.onclick = function () { var enlarged = toggle.getAttribute('aria-pressed') !== 'true'; toggle.setAttribute('aria-pressed', String(enlarged)); toggle.textContent = enlarged ? 'Fit question to page' : 'Enlarge question'; img.style.maxWidth = enlarged ? 'none' : '100%'; img.style.width = enlarged ? Math.max(800, img.naturalWidth) + 'px' : ''; };
+      article.append(toggle, frame, zoom); return { content: article, choices: ['A.', 'B.', 'C.', 'D.'] };
+    }
     var passage = document.createElement('div');
     passage.className = 'passage';
     String(supplement.passage || '').split(/\n\s*\n/).forEach(function (part) {
