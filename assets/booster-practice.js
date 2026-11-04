@@ -106,7 +106,8 @@
   }
 
   function markup(text) {
-    return escapeHtml(text).replace(/«u»/g, '<u>').replace(/«\/u»/g, '</u>');
+    return escapeHtml(text).replace(/«u»/g, '<u>').replace(/«\/u»/g, '</u>')
+      .replace(/&lt;(\/?)(u|sub|sup|em|i|strong|b)&gt;/gi, function (_, close, tag) { return '<' + close + tag.toLowerCase() + '>'; });
   }
 
   function supplementCard(item) {
@@ -117,7 +118,7 @@
       '<div class="booster-text-question">' + paragraphs(item.passage) + '<p class="stem">' + markup(item.stem || '') + '</p></div>' +
       '<p class="answer-prompt">Choose your answer.</p>' +
       '<ol class="choices booster-letter-choices booster-text-choices">' +
-      options.map(function (text, index) { return '<li class="choice"><strong>' + String.fromCharCode(65 + index) + '</strong><span class="choice-text">' + escapeHtml(text) + '</span></li>'; }).join('') +
+      options.map(function (text, index) { return '<li class="choice"><strong>' + String.fromCharCode(65 + index) + '</strong><span class="choice-text">' + markup(text) + '</span></li>'; }).join('') +
       '</ol></article>';
   }
 
@@ -452,7 +453,7 @@
     state.updatedAt = new Date().toISOString();
     try {
       localStorage.setItem(storageKey, JSON.stringify(state));
-      document.getElementById('portal-save').textContent = submitted ? 'Saved' : 'Saving…';
+      document.getElementById('portal-save').textContent = submitted ? 'Saved' : (hasProgress() ? 'Saving…' : 'No answers yet');
       if (!submitted && hasProgress()) scheduleProgressSync(false);
     } catch (error) {
       document.getElementById('portal-save').textContent = 'Unable to save';

@@ -541,7 +541,8 @@
   function supplementMarkup(text) {
     return String(text).replace(/[&<>"']/g, function (character) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
-    }).replace(/«u»/g, '<u>').replace(/«\/u»/g, '</u>');
+    }).replace(/«u»/g, '<u>').replace(/«\/u»/g, '</u>')
+      .replace(/&lt;(\/?)(u|sub|sup|em|i|strong|b)&gt;/gi, function (_, close, tag) { return '<' + close + tag.toLowerCase() + '>'; });
   }
 
   function supplementSourceQuestion(supplement) {
@@ -582,7 +583,7 @@
       wrapper.append(label, image);
       return wrapper;
     }
-    wrapper.textContent = String(choiceValue == null ? '' : choiceValue);
+    wrapper.innerHTML = supplementMarkup(String(choiceValue == null ? '' : choiceValue));
     return wrapper;
   }
 
