@@ -41,7 +41,8 @@
   var assignmentId = config.assignmentId || 'alex-skill-booster';
   var query = new URLSearchParams(window.location.search);
   var testMode = query.get('test') === '1';
-  var teacherAnswerToken = cleanReference(query.get('teacherAnswerToken'));
+  // Teacher test links carry the token in the fragment; the access script keeps it for this tab (2026-11-11).
+  var teacherAnswerToken = cleanReference(query.get('teacherAnswerToken') || (testMode && window.AlexPortalAccess && window.AlexPortalAccess.teacherTestToken ? window.AlexPortalAccess.teacherTestToken() : ''));
   var teacherAnswerMode = testMode && Boolean(teacherAnswerToken);
   var reviewSubmissionId = cleanReference(query.get('reviewSubmissionId'));
   var progressSaveId = cleanReference(query.get('progressSaveId'));
@@ -417,7 +418,7 @@
           }).join('') +
         '</div>';
     }, function () {
-      renderTeacherAnswerError('This Teacher answer link is unavailable or has expired. Reopen it from the Teacher Dashboard.');
+      renderTeacherAnswerError('This Teacher answer link is unavailable. Reopen it from the Teacher Dashboard.');
     });
 
     function renderTeacherAnswerError(message) {
@@ -864,10 +865,10 @@
   function renderUncheckedResult(result) {
     var resultBox = document.getElementById('portal-result');
     resultBox.hidden = false;
-    resultBox.innerHTML = '<span class="result-kicker">Submitted</span><div class="result-score"><strong>Answers saved</strong><span>Not checked yet</span></div><p>Your teacher has your work. Your score and the correct answers will appear here after it is checked.</p>';
+    resultBox.innerHTML = '<span class="result-kicker">Submitted</span><div class="result-score"><strong>Answers saved</strong><span>Waiting for review</span></div><p>Submitted. Waiting for your teacher to review. Your score and the correct answers will appear here after the review.</p>';
     document.getElementById('portal-submit-copy').hidden = true;
     document.getElementById('portal-unanswered').textContent = testMode && !submittedReviewMode ? 'Teacher test' : 'Submitted';
-    document.getElementById('portal-submit').textContent = 'Submitted · not checked yet';
+    document.getElementById('portal-submit').textContent = 'Submitted · waiting for review';
     updateProgress();
     if (submittedReviewMode) renderSubmittedDifficultyFlags(result.difficultyFlags || []);
     else {
@@ -947,14 +948,22 @@
     });
   }
 
-  function jsonp(action, parameters, success, failure) {
+  function jsonp(action, parameters, success, failure, renewed) {
     parameters.accessToken = portalAccessToken();
     parameters.teacherAnswerToken = teacherAnswerToken;
     var callbackName = '__alexBooster' + Date.now() + Math.random().toString(16).slice(2);
     var script = document.createElement('script');
     var timeout = setTimeout(function () { cleanup(); if (failure) failure(new Error('Timed out')); }, 9000);
     function cleanup() { clearTimeout(timeout); delete window[callbackName]; if (script.parentNode) script.parentNode.removeChild(script); }
-    window[callbackName] = function (data) { cleanup(); success(data); };
+    window[callbackName] = function (data) {
+      cleanup();
+      // An expired short token is renewed from this browser's remembered credential, then the request runs once more.
+      if (!renewed && data && data.ok === false && /course access expired/i.test(data.error || '') && window.AlexPortalAccess && window.AlexPortalAccess.ensureFreshAccess) {
+        window.AlexPortalAccess.ensureFreshAccess(true).then(function () { jsonp(action, parameters, success, failure, true); }, function () { success(data); });
+        return;
+      }
+      success(data);
+    };
     script.onerror = function () { cleanup(); if (failure) failure(new Error('Unable to load')); };
     var query = Object.keys(parameters).map(function (key) { return encodeURIComponent(key) + '=' + encodeURIComponent(parameters[key]); });
     query.push('action=' + encodeURIComponent(action));
