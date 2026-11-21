@@ -100,7 +100,16 @@
       var items = data && data.ok && Array.isArray(data.items) ? data.items : [];
       if (items.length !== supplementExpected) throw new Error('Supplement count mismatch');
       var list = document.querySelector('.booster-question-list');
-      items.forEach(function (item) { list.insertAdjacentHTML('beforeend', supplementCard(item)); });
+      // A long set in parts (config.sections: [{title, from, to}]) shows each part's title above its first question.
+      var sections = Array.isArray(config.sections) ? config.sections : [];
+      items.forEach(function (item) {
+        sections.forEach(function (section, index) {
+          if (Number(section.from) !== Number(item.number)) return;
+          list.insertAdjacentHTML('beforeend', '<h2 class="practice-section-heading" id="section-' + (index + 1) + '">' + escapeHtml(section.title) +
+            ' <span>Questions ' + Number(section.from) + '–' + Number(section.to) + '</span></h2>');
+        });
+        list.insertAdjacentHTML('beforeend', supplementCard(item));
+      });
     }).catch(function () {
       supplementMissing = true;
     });
