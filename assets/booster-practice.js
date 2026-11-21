@@ -75,7 +75,11 @@
     if (submittedReviewMode) state.submissionId = reviewSubmissionId;
     if (progressReviewMode) state.submissionId = progressSaveId;
 
-    if (!questions.length) return;
+    if (!questions.length) {
+      // A set whose questions all come from the private request: say so when none arrived, instead of an empty page.
+      if (supplementMissing) showSupplementNotice();
+      return;
+    }
 
     installHeader();
     enhanceQuestions();
@@ -92,13 +96,21 @@
 
   function loadSupplementQuestions() {
     if (!supplementExpected || !config.submissionEndpoint) return Promise.resolve();
-    return portalReady.then(function () {
+    // The questions come in one request. A slow or failed answer is asked for again (three tries in all) before the page
+    // says they did not open: a long set is one large answer, and the service is now and then slow (2026-11-21).
+    function requestItems(triesLeft) {
       return new Promise(function (resolve, reject) {
         jsonp('getBoosterSupplement', { assignmentId: assignmentId }, resolve, reject);
+      }).then(function (data) {
+        var items = data && data.ok && Array.isArray(data.items) ? data.items : [];
+        if (items.length !== supplementExpected) throw new Error('Supplement count mismatch');
+        return items;
+      }).catch(function (error) {
+        if (triesLeft > 1) return requestItems(triesLeft - 1);
+        throw error;
       });
-    }).then(function (data) {
-      var items = data && data.ok && Array.isArray(data.items) ? data.items : [];
-      if (items.length !== supplementExpected) throw new Error('Supplement count mismatch');
+    }
+    return portalReady.then(function () { return requestItems(3); }).then(function (items) {
       var list = document.querySelector('.booster-question-list');
       // A long set in parts (config.sections: [{title, from, to}]) shows each part's title above its first question.
       var sections = Array.isArray(config.sections) ? config.sections : [];
@@ -166,7 +178,9 @@
     var list = document.querySelector('.booster-question-list');
     var note = document.createElement('p');
     note.className = 'booster-supplement-notice';
-    note.textContent = supplementExpected + ' more question' + (supplementExpected === 1 ? '' : 's') + ' did not open. Please reload before you submit.';
+    note.textContent = questions.length
+      ? supplementExpected + ' more question' + (supplementExpected === 1 ? '' : 's') + ' did not open. Please reload before you submit.'
+      : 'The questions did not open. Please reload this page.';
     list.appendChild(note);
   }
 
